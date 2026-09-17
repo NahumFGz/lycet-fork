@@ -1,0 +1,44 @@
+# Dev-only image: mirrors the runtime deps of the prod `Dockerfile` (same base image/alpine
+# version, so the same apk packages are known to work) but keeps composer dev-dependencies,
+# mounts source instead of baking it in, and skips the php-pm/no-dev optimizations that make the
+# prod image unsuitable for iterating on code or running phpunit.
+FROM php:8.1-alpine3.17
+
+WORKDIR /var/www/html
+
+RUN apk add --no-cache \
+        git \
+        unzip \
+        curl \
+        libxml2-dev \
+        libstdc++ \
+        libx11 \
+        libxrender \
+        libxext \
+        libssl1.1 \
+        ca-certificates \
+        fontconfig \
+        freetype \
+        freetype-dev \
+        libpng-dev \
+        libjpeg-turbo-dev \
+        ttf-droid \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install soap pcntl gd \
+    # gd no lo usa el código de producción, solo ConfigurationControllerTest (genera un logo de
+    # prueba con imagecreatetruecolor()) — sin esto, phpunit falla 2 tests
+    && docker-php-ext-configure opcache --enable-opcache \
+    && docker-php-ext-install opcache \
+    && curl --silent --show-error -sS https://getcomposer.org/installer \
+        | php -- --install-dir=/usr/local/bin --filename=composer
+
+# Same wkhtmltopdf static binary the prod Dockerfile uses, needed for the */pdf endpoints.
+COPY --from=surnet/alpine-wkhtmltopdf:3.17.0-0.12.6-small /bin/wkhtmltopdf /usr/bin/wkhtmltopdf
+
+COPY docker/dev-entrypoint.sh /usr/local/bin/dev-entrypoint.sh
+RUN chmod +x /usr/local/bin/dev-entrypoint.sh
+
+EXPOSE 8000
+
+ENTRYPOINT ["dev-entrypoint.sh"]
+CMD ["php", "-S", "0.0.0.0:8000", "-t", "public"]

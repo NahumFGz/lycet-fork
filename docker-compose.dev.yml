@@ -1,0 +1,17 @@
+# Dev environment for lycet-fork — for people without a local PHP setup.
+# Usage: see .claude/skills/dev/SKILL.md
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/var/www/html
+      # named volume so the image's vendor/ isn't shadowed by the (likely empty/absent)
+      # vendor/ on the host when the bind mount above is applied
+      - vendor:/var/www/html/vendor
+
+volumes:
+  vendor:

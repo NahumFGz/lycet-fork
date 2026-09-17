@@ -1,37 +1,38 @@
 # Estado del proyecto — lycet-fork
 
-Última verificación: 2026-09-16, sobre `master` en `872b048` ("Add fecEntregaBienes field to
-Despatch.Shipment.yml").
+Última verificación: 2026-09-17, sobre `master` + el commit que aplica el fix del Bug 1
+(`composer update greenter/xml greenter/ws`, ver `git log` para el SHA exacto).
 
 Causa raíz y fix completo de cada bug: [`diagnostico-bugs.md`](diagnostico-bugs.md) — este
 archivo solo lleva el estado (qué se confirmó, qué falta, contra qué commit), no lo repitas acá.
 
 ## Bug 1 — `greenter/xml`/`greenter/ws` desfasados (error 3617)
 
-**❌ No resuelto.** Verificado en `composer.lock`:
+**✅ Resuelto y verificado contra SUNAT/GRE test real (no solo local).** `composer update
+greenter/xml greenter/ws` (dentro del contenedor de la skill `dev`) los subió a `v5.3.0`,
+igualando al resto:
 
 ```
 greenter/core      v5.3.0
 greenter/htmltopdf v5.3.0
 greenter/lite      v5.3.0
 greenter/report    v5.3.0
-greenter/ws        v5.2.0   ← desfasado
-greenter/xml       v5.2.0   ← desfasado
+greenter/ws        v5.3.0
+greenter/xml       v5.3.0
 ```
 
-El commit `872b048` solo agregó `fecEntregaBienes` al serializer YAML
-(`config/serializer/Despatch.Shipment.yml`) — el modelo PHP y el serializer ya aceptaban el
-campo desde antes; lo que falta sigue siendo el XML builder (`greenter/xml`). Confirmar de nuevo
-con:
+`php bin/phpunit` sigue en 21/21 OK. Verificación funcional (no solo el bump de versión):
+`POST /api/v1/despatch/send` con `codTraslado: "01"`, `modTraslado: "01"`, `transportista` (sin
+`vehiculo`/`choferes`) y `envio.fecEntregaBienes` seteado contra el ambiente GRE test
+(`AUTH_URL`/`API_URL` del `.env`, sandbox de Nubefact) — el XML generado ahora sí incluye
+`<cac:LoadingTransportEvent><cbc:OccurrenceDate>...</cbc:OccurrenceDate></cac:LoadingTransportEvent>`
+dentro de `ShipmentStage` (ausente con `greenter/xml` v5.2.0), y `GET /api/v1/despatch/status`
+devolvió `cdrResponse.code: "0"` / `"ACEPTADA"`. Sin errores 3617.
 
-```bash
-composer show greenter/xml greenter/ws | grep versions
-# o
-python3 -c "import json; d=json.load(open('composer.lock')); [print(p['name'], p['version']) for p in d['packages'] if p['name'].startswith('greenter/')]"
-```
-
-**Falta**: aplicar el fix y verificar contra SUNAT real — pasos exactos en
-`diagnostico-bugs.md`, sección "Bug 1".
+**Pendiente, no bloqueante**: no se pudo reproducir el issue relacionado
+[`giansalex/lycet#630`](https://github.com/giansalex/lycet/issues/630) (error 3354, `vehiculo`
+bajo `modTraslado: "01"`) porque el caso de prueba usado no incluía `vehiculo`/`choferes` — es
+lo que dice el "siguiente paso sugerido" de abajo, sigue abierto.
 
 ## Bug 2 — `DespatchController` sin try/catch ante SUNAT caída
 
@@ -46,11 +47,10 @@ puede delegar en `DocumentRequest` tal cual).
 
 ## Siguiente paso sugerido
 
-Bug 1 es el más simple y desbloquea probar guía de remisión con traslado público de punta a
-punta; conviene resolverlo primero. El issue relacionado
-[`giansalex/lycet#630`](https://github.com/giansalex/lycet/issues/630) (error 3354, `vehiculo`
-bajo `modTraslado: "01"`) no se ha podido reproducir todavía porque el 3617 bloquea antes de
-llegar a esa validación — revisar una vez resuelto el bug 1.
+Con el Bug 1 resuelto, sigue el Bug 2 (try/catch en `DespatchController`). Después, revisar el
+issue relacionado [`giansalex/lycet#630`](https://github.com/giansalex/lycet/issues/630) (error
+3354, `vehiculo` bajo `modTraslado: "01"`) probando con `vehiculo`/`choferes` incluidos — ya no
+debería bloquear el 3617 antes de llegar a esa validación.
 
 ## Cómo actualizar este archivo
 

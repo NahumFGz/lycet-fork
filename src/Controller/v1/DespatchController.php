@@ -11,6 +11,9 @@ namespace App\Controller\v1;
 use App\Service\DocumentRequestInterface;
 use App\Service\SeeApiFactory;
 use Greenter\Model\Despatch\Despatch;
+use Greenter\Model\Response\Error;
+use Greenter\Model\Response\StatusResult;
+use Greenter\Model\Response\SummaryResult;
 use JMS\Serializer\SerializerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -48,9 +51,14 @@ class DespatchController extends AbstractController
         /** @var \Greenter\Model\Despatch\Despatch $document */
         $document = $this->document->getDocument(Despatch::class);
         $see = $factory->build($document->getCompany()->getRuc());
-        $result = $see->send($document);
 
-        $xml = $see->getLastXml();
+        $xml = null;
+        try {
+            $result = $see->send($document);
+            $xml = $see->getLastXml();
+        } catch (\Throwable $e) {
+            $result = (new SummaryResult())->setError(new Error('HTTP', $e->getMessage()));
+        }
 
         $data = [
             'xml' => $xml,
@@ -96,10 +104,15 @@ class DespatchController extends AbstractController
             return new JsonResponse(['message' => 'Ticket Requerido'], 400);
         }
         $see = $factory->build($request->query->get('ruc'));
-        $result = $see->getStatus($ticket);
 
-        if ($result->isSuccess()) {
-            $result->setCdrZip(base64_encode($result->getCdrZip()));
+        try {
+            $result = $see->getStatus($ticket);
+
+            if ($result->isSuccess()) {
+                $result->setCdrZip(base64_encode($result->getCdrZip()));
+            }
+        } catch (\Throwable $e) {
+            $result = (new StatusResult())->setError(new Error('HTTP', $e->getMessage()));
         }
 
         $json = $this->serializer->serialize($result, 'json');

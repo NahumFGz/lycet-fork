@@ -69,22 +69,32 @@ de dar por completo el soporte a traslado público.
 caller puede inspeccionar. `despatch/send` y `despatch/status`, en el mismo escenario, devuelven
 un **`500` crudo** (excepción PHP sin capturar, sin body JSON útil).
 
-**Causa**: inconsistencia entre los controllers — los de `summary`/`voided`/`reversion` delegan
-en `DocumentRequest::send()`, que captura la excepción de conexión y la normaliza al
-`sunatResponse` de siempre; `DespatchController` reimplementa `send()`/`status()` inline (porque
-usa `SeeApiFactory`/`Greenter\Api` en vez de `SeeFactory`/`Greenter\See`, ver `CLAUDE.md` —
-sección Arquitectura) y no captura nada.
+**Causa real** (corregido tras leer el código vendorizado — la hipótesis inicial de "copiar el
+try/catch de `SummaryController`/`VoidedController`/`ReversionController`" era incorrecta,
+**esos controllers no tienen ningún try/catch propio**): la resiliencia de los tipos SOAP
+(`Invoice`/`Note`/`Summary`/`Voided`/`Reversion`/`Perception`/`Retention`) no vive en
+`lycet-fork` sino dentro de `greenter/ws`: `BillSender::send()`
+(`vendor/greenter/ws/src/Ws/Services/BillSender.php`) atrapa `SoapFault` internamente y devuelve
+un `BillResult` con `success: false`. `Despatch` usa un sender distinto, `GreSender`
+(`vendor/greenter/ws/src/Api/GreSender.php`), que **también** atrapa `ApiException` en
+`send()`/`status()` — pero antes de llegar ahí, `Greenter\Api::createSender()`
+(`vendor/greenter/lite/src/Greenter/Api.php`) hace un intercambio OAuth2 (`AuthApi`) para
+obtener el token de acceso al GRE API. Si ese host (`AUTH_URL`) está caído, Guzzle tira una
+excepción de conexión cruda (`GuzzleHttp\Exception\ConnectException`, no `ApiException`) que
+nada atrapa antes de llegar a `DespatchController` sin protección → `500`.
 
-**Fix**: en `src/Controller/v1/DespatchController.php`, envolver la llamada a
-`$see->send($document)` / `$see->getStatus($ticket)` en el mismo try/catch que usan
-`SummaryController`/`VoidedController`/`ReversionController` (vía `DocumentRequest::send()`),
-devolviendo `sunatResponse: {success: false, error: {code: "HTTP", message: "..."}}` en vez de
-dejar propagar la excepción a un `500`. Como `DespatchController` no puede delegar tal cual en
-`DocumentRequest` (está cableado a `SeeFactory`/`Greenter\See`, no a `SeeApiFactory`/
-`Greenter\Api`), el try/catch hay que agregarlo directo en el controller o extender
-`DocumentRequest` para que soporte ambos factories.
+**Fix aplicado**: en `src/Controller/v1/DespatchController.php`, envolver `$see->send($document)`
+(en `send()`) y `$see->getStatus($ticket)` (en `status()`) en `try { ... } catch (\Throwable $e)`
+—`\Throwable` y no un tipo específico porque el fallo puede venir de Guzzle, de `ApiException`,
+o de cualquier otra cosa en la cadena de auth+envío— construyendo a mano un
+`Greenter\Model\Response\SummaryResult`/`StatusResult` (los mismos tipos que usa `GreSender`
+internamente) con `setError(new Error('HTTP', $e->getMessage()))`. `SeeApiFactory::build()` se
+deja fuera del try: solo configura credenciales desde `.env`/`empresas.json`, no hace red.
 
-**Cómo verificar**: apuntar `FE_URL`/`RE_URL`/`GUIA_URL`/`AUTH_URL`/`API_URL` a un host que nunca
-responde (mismo patrón que el servicio `lycet-sunat-down` de `demo-lycet`) y confirmar que
-`despatch/send`/`despatch/status` responden `200` con `sunatResponse.success: false` en vez de
-`500`.
+**Cómo verificar**: apuntar `AUTH_URL`/`API_URL` a un host que nunca responde (ej.
+`http://127.0.0.1:65535/v1`, mismo patrón que el servicio `lycet-sunat-down` de `demo-lycet`;
+`FE_URL`/`RE_URL`/`GUIA_URL` son del cliente SOAP legado y no los usa `Despatch`) y confirmar que
+`despatch/send`/`despatch/status` responden `200` con `sunatResponse.success: false` y
+`error.code: "HTTP"` en vez de `500`. Verificado 2026-09-17: ambos devuelven `200` con el error
+normalizado (`cURL error 7: ... oauth2/token`), y el flujo normal contra el sandbox GRE test
+sigue funcionando igual después del fix.

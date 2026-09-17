@@ -1,7 +1,7 @@
 # Estado del proyecto — lycet-fork
 
-Última verificación: 2026-09-17, sobre `master` + el commit que aplica el fix del Bug 1
-(`composer update greenter/xml greenter/ws`, ver `git log` para el SHA exacto).
+Última verificación: 2026-09-17, sobre `master` + los commits que aplican los fixes de ambos
+bugs (ver `git log` para los SHA exactos).
 
 Causa raíz y fix completo de cada bug: [`diagnostico-bugs.md`](diagnostico-bugs.md) — este
 archivo solo lleva el estado (qué se confirmó, qué falta, contra qué commit), no lo repitas acá.
@@ -36,21 +36,27 @@ lo que dice el "siguiente paso sugerido" de abajo, sigue abierto.
 
 ## Bug 2 — `DespatchController` sin try/catch ante SUNAT caída
 
-**❌ No resuelto.** Verificado leyendo `src/Controller/v1/DespatchController.php`: `send()` y
-`status()` siguen llamando a `$see->send($document)` / `$see->getStatus($ticket)` directo, sin
-try/catch — a diferencia de `SummaryController`/`VoidedController`/`ReversionController`, que
-delegan en `DocumentRequest::send()` (`src/Service/DocumentRequest.php`).
+**✅ Resuelto y verificado.** `send()`/`status()` en `src/Controller/v1/DespatchController.php`
+ahora envuelven `$see->send($document)`/`$see->getStatus($ticket)` en `try/catch (\Throwable)`,
+devolviendo un `SummaryResult`/`StatusResult` con `error.code: "HTTP"` en vez de dejar propagar
+la excepción. La causa real (documentada ahora en `diagnostico-bugs.md`) no era "falta copiar un
+try/catch que sí tienen los otros controllers" — esos no tienen ninguno, la resiliencia es
+interna a `greenter/ws`; lo que faltaba era proteger el paso de autenticación OAuth2 de
+`Greenter\Api`, que no está cubierto por el try/catch interno de `GreSender`.
 
-**Falta**: aplicar el fix y verificar con el patrón `lycet-sunat-down` — pasos exactos en
-`diagnostico-bugs.md`, sección "Bug 2" (incluye el detalle de por qué `DespatchController` no
-puede delegar en `DocumentRequest` tal cual).
+`php bin/phpunit` sigue en 21/21 OK. Verificación funcional: con `AUTH_URL`/`API_URL` apuntando
+a `http://127.0.0.1:65535/v1` (host que rechaza la conexión), tanto `despatch/send` como
+`despatch/status` devolvieron `200` con `sunatResponse.success: false` /
+`error.code: "HTTP"` (antes: `500` crudo). Con las URLs restauradas al sandbox GRE test real, el
+flujo normal (`send` → ticket → `status` → `cdrResponse.code: "0"`) sigue funcionando igual.
 
 ## Siguiente paso sugerido
 
-Con el Bug 1 resuelto, sigue el Bug 2 (try/catch en `DespatchController`). Después, revisar el
-issue relacionado [`giansalex/lycet#630`](https://github.com/giansalex/lycet/issues/630) (error
-3354, `vehiculo` bajo `modTraslado: "01"`) probando con `vehiculo`/`choferes` incluidos — ya no
-debería bloquear el 3617 antes de llegar a esa validación.
+Con los dos bugs del fork resueltos y verificados, revisar el issue relacionado
+[`giansalex/lycet#630`](https://github.com/giansalex/lycet/issues/630) (error 3354, `vehiculo`
+bajo `modTraslado: "01"`) probando con `vehiculo`/`choferes` incluidos — ya no debería bloquear
+el 3617 antes de llegar a esa validación. No es un bug de este fork, es un tema aparte a evaluar
+si conviene abordarlo acá.
 
 ## Cómo actualizar este archivo
 

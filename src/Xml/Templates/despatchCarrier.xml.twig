@@ -16,8 +16,12 @@
  #    transportista.
  #
  # El resto (Shipment, ShipmentStage, CarrierParty, DriverPerson, TransportHandlingUnit,
- # DespatchLine) es identico a la 09 y se mantiene sincronizado con greenter — si se actualiza
- # greenter/xml, re-derivar esta plantilla y volver a aplicar las 4 diferencias de arriba.
+ # DespatchLine) es identico a la 09.
+ #
+ # !! ANTE CUALQUIER VERSION NUEVA DE GREENTER, revisar este archivo — es una copia derivada y se
+ # !! desactualiza en silencio. Si greenter ya trae la 31, BORRAR esto y usar la suya; si no,
+ # !! re-derivar desde la nueva despatch2022.xml.twig y reaplicar las 4 diferencias de arriba.
+ # !! Procedimiento completo: paso 5 de .claude/skills/greenter/SKILL.md.
  #}
 {% apply spaceless %}
 <?xml version="1.0" encoding="utf-8"?>

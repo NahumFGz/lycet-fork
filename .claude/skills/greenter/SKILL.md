@@ -1,6 +1,6 @@
 ---
 name: greenter
-description: Cómo revisar si hay una versión nueva de greenter/greenter y actualizarla en este repo con composer sin romper nada. Úsala antes de correr cualquier `composer update`/`composer require greenter/*`, y antes de decir "greenter está al día".
+description: Cómo revisar si hay una versión nueva de greenter/greenter y actualizarla en este repo con composer sin romper nada, incluida la revisión OBLIGATORIA de la guía de remisión del transportista (tipoDoc 31), que este fork mantiene como copia derivada de greenter. Úsala antes de correr cualquier `composer update`/`composer require greenter/*`, ante cualquier versión nueva de greenter, y antes de decir "greenter está al día".
 ---
 
 # greenter — cómo actualizar la librería
@@ -56,7 +56,8 @@ cambió". En su lugar:
            print(p['name'], p['version'])
    "
    ```
-2. **Ver qué versión hay disponible** para cada uno (Packagist o `composer show -a
+2. **Ver qué versión hay disponible** para cada uno, y si el release toca la guía de remisión
+   (`greenter/xml`, modelos `Despatch`), leer el paso 5 antes de seguir (Packagist o `composer show -a
    greenter/<paquete>`), y leer el/los release(s) intermedios en GitHub Releases para saber si
    traen breaking changes o requieren tocar algo en lycet (serializers YAML en
    `config/serializer/`, nuevos campos en modelos, etc. — ver "Serialización" en el `CLAUDE.md`
@@ -73,12 +74,36 @@ cambió". En su lugar:
 4. **Confirmar el resultado en `composer.lock`**, repitiendo el comando del paso 1: los 8
    paquetes `greenter/*` deberían quedar en la misma versión mayor/minor esperada (no basta con
    mirar los 4 que están en `composer.json`).
-5. **Si se movió `greenter/xml`, re-derivar la plantilla de la guía del transportista.**
-   `src/Xml/Templates/despatchCarrier.xml.twig` (el `tipoDoc` 31 que agrega este fork) es una
-   **copia derivada** de `despatch2022.xml.twig` de greenter — la del remitente (09). Un bump de
-   `greenter/xml` actualiza la del 09 y **deja la nuestra congelada**, sin que falle nada: la 31
-   sigue emitiendo con la estructura vieja hasta que SUNAT la rechace. Es el único riesgo silencioso
-   que dejó ese agregado. Qué hacer:
+5. **🚩 OBLIGATORIO en todo bump: revisar la guía del transportista (`tipoDoc` 31).**
+   Este fork agrega ese documento por su cuenta porque greenter no lo modela — ver la skill
+   [`lycet-fork`](../lycet-fork/reference/estado-proyecto.md). Es lo único del repo que **depende
+   de una copia** de código de greenter, así que **ninguna versión nueva se da por aplicada sin
+   pasar por acá**. Son dos preguntas, en este orden:
+
+   **5a. ¿La versión nueva ya trae la 31 de fábrica?** Si greenter la implementó, lo nuestro sobra
+   y hay que **borrarlo y usar el suyo** — mantener una copia propia de algo que la librería ya
+   resuelve es la peor de las dos opciones.
+
+   ```bash
+   # ¿aparecieron el remitente y su DespatchParty en la plantilla del 09?
+   curl -s https://raw.githubusercontent.com/thegreenter/greenter/vNUEVA/packages/xml/src/Xml/Templates/despatch2022.xml.twig \
+     | grep -c "DespatchParty\|remitente"
+   # ¿se movió el issue historico, o se mergeo alguno de los PRs de la comunidad?
+   #   https://github.com/thegreenter/greenter/issues/227   (abierto desde 2023)
+   #   https://github.com/thegreenter/greenter/pull/243  ·  .../pull/247  (cerrados sin mergear)
+   ```
+
+   Si la respuesta es sí: migrar a su modelo/plantilla y eliminar `src/Model/DespatchCarrier.php`,
+   `src/Xml/`, `src/Greenter/CarrierApi.php`, `config/serializer-app/` y la rama por `tipoDoc` de
+   `DespatchController` — dejándolo anotado en la skill `lycet-fork`. Revisar de paso si su
+   implementación resuelve la **discrepancia pendiente** (si la 31 lleva `HandlingCode` y
+   `TransportModeCode`, que el PR #247 deja y nosotros omitimos).
+
+   **5b. Si no la trae, re-derivar nuestra plantilla.**
+   `src/Xml/Templates/despatchCarrier.xml.twig` es una **copia derivada** de
+   `despatch2022.xml.twig` — la del remitente (09). Un bump de `greenter/xml` actualiza la del 09 y
+   **deja la nuestra congelada, sin que falle nada**: la 31 sigue emitiendo con la estructura vieja
+   hasta que SUNAT la rechace, con el camión cargado. Es el único riesgo silencioso del repo.
 
    ```bash
    # diff de la plantilla del 09 entre la version vieja y la nueva
@@ -88,11 +113,14 @@ cambió". En su lugar:
 
    Si no cambió nada, no hay nada que hacer. Si cambió, re-derivar: partir de la nueva
    `despatch2022.xml.twig` y volver a aplicar las **4 diferencias** del 31, que están listadas en
-   la cabecera de `despatchCarrier.xml.twig` y en la skill
-   [`lycet-fork`](../lycet-fork/reference/estado-proyecto.md) — suma `cac:DespatchParty` (el
-   remitente) y omite `cbc:HandlingCode`, `cbc:TransportModeCode` y `cac:SellerSupplierParty`.
-   `tests/Controller/v1/DespatchCarrierControllerTest.php` verifica esas 4 diferencias, pero
-   **no** detecta un campo nuevo que greenter haya agregado y nosotros no.
+   la cabecera de `despatchCarrier.xml.twig` y en la skill `lycet-fork` — suma `cac:DespatchParty`
+   (el remitente) y omite `cbc:HandlingCode`, `cbc:TransportModeCode` y
+   `cac:SellerSupplierParty`. `tests/Controller/v1/DespatchCarrierControllerTest.php` verifica esas
+   4 diferencias, pero **no** detecta un campo nuevo que greenter haya agregado y nosotros no —
+   eso solo lo ve el diff de arriba.
+
+   Pase lo que pase, dejar en la skill `lycet-fork` contra qué versión de greenter se revisó por
+   última vez, aunque la conclusión haya sido "no cambió nada".
 6. **Correr los tests**: `php bin/phpunit`.
 7. **Si el cambio toca generación de XML o envío a SUNAT** (`greenter/xml`, `greenter/ws`,
    `greenter/gre-api`), correr tests no alcanza — verificar contra SUNAT real (beta), porque

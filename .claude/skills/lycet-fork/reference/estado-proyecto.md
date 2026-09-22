@@ -90,6 +90,23 @@ mandar una 31 contra el GRE de SUNAT real con `client_id`/`client_secret` de SOL
 usarla en producción; recién ahí se sabe si falta algún campo (p.ej. datos del vehículo que la 31
 exija y la 09 no).
 
+### 🚩 Cuando salga una versión nueva de greenter
+
+**Revisar esta implementación, siempre.** Es lo único del repo que vive de una copia de código de
+greenter, y su forma de fallar es silenciosa. El procedimiento completo es el **paso 5 de la skill
+[`greenter`](../../greenter/SKILL.md)**; en corto, dos preguntas:
+
+1. **¿La versión nueva ya trae la 31?** Entonces borrar todo lo de la tabla de arriba y usar la de
+   greenter — mantener una copia propia de algo que la librería ya resuelve es lo peor de los dos
+   mundos. Mirar de paso si su versión zanja la discrepancia de abajo.
+2. **¿No la trae?** Entonces diff de `despatch2022.xml.twig` entre la versión vieja y la nueva, y
+   re-derivar la nuestra si cambió. Los tests **no** detectan un campo que greenter agregó y
+   nosotros no.
+
+Anotar acá contra qué versión se revisó, aunque la conclusión sea "no cambió nada".
+
+**Última revisión: greenter v5.3.0** (2026-09-22) — no la trae, ver abajo.
+
 ### Qué dice el upstream (verificado 2026-09-22)
 
 greenter **no** tiene la 31, ni en release ni en `master`:

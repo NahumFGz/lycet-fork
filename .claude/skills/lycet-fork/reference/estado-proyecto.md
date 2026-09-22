@@ -90,6 +90,39 @@ mandar una 31 contra el GRE de SUNAT real con `client_id`/`client_secret` de SOL
 usarla en producción; recién ahí se sabe si falta algún campo (p.ej. datos del vehículo que la 31
 exija y la 09 no).
 
+### Qué dice el upstream (verificado 2026-09-22)
+
+greenter **no** tiene la 31, ni en release ni en `master`:
+
+- [`#227`](https://github.com/thegreenter/greenter/issues/227) "Guía de remisión del
+  trasportista", **abierto desde 2023-09-11**. Preguntan justo lo que probamos acá —si basta con
+  cambiar el tipo de documento— y el autor responde: *"creo que no, se necesita evaluar la
+  documentación"*. Dos usuarios más lo pidieron en 2023 y 2025.
+- [`#243`](https://github.com/thegreenter/greenter/pull/243) y
+  [`#247`](https://github.com/thegreenter/greenter/pull/247), de `gquispeg`, implementan la 31.
+  Ambos **cerrados sin mergear** (el último, 2025-08-29), sin un solo comentario del mantenedor —
+  solo el bot de calidad, que pasó.
+- `master` hoy: sin `DespatchParty`, sin `remitente`, sin condicional por `tipoDoc`. Último
+  release `v5.3.0` (2026-06-08), que es el que este fork ya usa.
+
+**Coincidencias y diferencias con el PR #247** (implementación independiente, buen contraste):
+
+| | PR #247 | Este fork |
+|---|---|---|
+| `cac:DespatchParty` con el remitente dentro de `cac:Despatch` | ✅ igual | ✅ igual |
+| `schemeID` del remitente | fijo `"6"` (solo RUC) | `{{ remitente.tipoDoc }}` — un remitente persona natural con DNI es el caso normal de un courier |
+| `HandlingCode` / `TransportModeCode` / `SellerSupplierParty` en la 31 | los deja | los omite |
+| `envio.subContratado` (`cac:Consignment/cac:LogisticsOperatorParty`) | lo agrega | **no implementado** |
+
+⚠️ **Discrepancia sin resolver**: si la 31 lleva o no motivo (`HandlingCode`) y modalidad
+(`TransportModeCode`). Acá se omiten siguiendo la plantilla de la comunidad que separa por
+`tipoDoc`; el PR #247 los deja. El sandbox GRE no lo dirime porque acepta cualquiera de las dos
+("CDR de prueba"). **Lo resuelve la prueba contra el GRE de SUNAT real**, que es el siguiente paso
+de abajo — si rechaza, el código del error dice cuál de las dos lecturas era la correcta.
+
+`subContratado` no aplica mientras el traslado lo haga flota propia; si algún día se terceriza un
+tramo, el PR #247 es el modelo a copiar.
+
 ## Siguiente paso sugerido
 
 Mandar una guía del transportista (31) contra el **GRE de SUNAT real**, no el sandbox — es lo

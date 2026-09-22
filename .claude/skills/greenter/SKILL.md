@@ -73,13 +73,33 @@ cambió". En su lugar:
 4. **Confirmar el resultado en `composer.lock`**, repitiendo el comando del paso 1: los 8
    paquetes `greenter/*` deberían quedar en la misma versión mayor/minor esperada (no basta con
    mirar los 4 que están en `composer.json`).
-5. **Correr los tests**: `php bin/phpunit`.
-6. **Si el cambio toca generación de XML o envío a SUNAT** (`greenter/xml`, `greenter/ws`,
+5. **Si se movió `greenter/xml`, re-derivar la plantilla de la guía del transportista.**
+   `src/Xml/Templates/despatchCarrier.xml.twig` (el `tipoDoc` 31 que agrega este fork) es una
+   **copia derivada** de `despatch2022.xml.twig` de greenter — la del remitente (09). Un bump de
+   `greenter/xml` actualiza la del 09 y **deja la nuestra congelada**, sin que falle nada: la 31
+   sigue emitiendo con la estructura vieja hasta que SUNAT la rechace. Es el único riesgo silencioso
+   que dejó ese agregado. Qué hacer:
+
+   ```bash
+   # diff de la plantilla del 09 entre la version vieja y la nueva
+   git -C <clon de thegreenter/greenter> diff v5.3.0..vNUEVA -- \
+       packages/xml/src/Xml/Templates/despatch2022.xml.twig
+   ```
+
+   Si no cambió nada, no hay nada que hacer. Si cambió, re-derivar: partir de la nueva
+   `despatch2022.xml.twig` y volver a aplicar las **4 diferencias** del 31, que están listadas en
+   la cabecera de `despatchCarrier.xml.twig` y en la skill
+   [`lycet-fork`](../lycet-fork/reference/estado-proyecto.md) — suma `cac:DespatchParty` (el
+   remitente) y omite `cbc:HandlingCode`, `cbc:TransportModeCode` y `cac:SellerSupplierParty`.
+   `tests/Controller/v1/DespatchCarrierControllerTest.php` verifica esas 4 diferencias, pero
+   **no** detecta un campo nuevo que greenter haya agregado y nosotros no.
+6. **Correr los tests**: `php bin/phpunit`.
+7. **Si el cambio toca generación de XML o envío a SUNAT** (`greenter/xml`, `greenter/ws`,
    `greenter/gre-api`), correr tests no alcanza — verificar contra SUNAT real (beta), porque
    SUNAT cambia reglas de validación con el tiempo (ej. `fecEntregaBienes` obligatorio desde
    2026-06-01, ver skill `lycet-fork`) y esas reglas no se detectan con `/xml` (solo firma
    localmente) ni con un test unitario que no pega contra SUNAT.
-7. Commitear `composer.json` (si cambió) + `composer.lock` juntos.
+8. Commitear `composer.json` (si cambió) + `composer.lock` juntos.
 
 ## Si el bump es de versión mayor (`^5.x` → `^6.x`)
 

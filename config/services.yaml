@@ -25,6 +25,11 @@ services:
             - '../src/Entity/'
             - '../src/Kernel.php'
             - '../src/Tests/'
+            # Modelo, plantillas y builder de la guia del transportista: no son servicios.
+            # CarrierApi si lo es, pero se registra a mano abajo como Greenter\Api.
+            - '../src/Greenter/'
+            - '../src/Model/'
+            - '../src/Xml/'
 
     # controllers are imported separately to make sure services can be injected
     # as action arguments even if you don't extend any base controller class
@@ -91,6 +96,9 @@ services:
             - [setCachePath, ['%kernel.cache_dir%']]
 
     Greenter\Api:
+        # CarrierApi = Api + guia de remision del transportista (tipoDoc 31), que greenter no
+        # modela. Todo lo demas pasa por el Api de siempre — ver src/Greenter/CarrierApi.php.
+        class: App\Greenter\CarrierApi
         public: true
         arguments:
             - auth: '%env(AUTH_URL)%'

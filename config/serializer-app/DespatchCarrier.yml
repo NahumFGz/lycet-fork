@@ -1,0 +1,4 @@
+App\Model\DespatchCarrier:
+    properties:
+        remitente:
+            type: Greenter\Model\Client\Client

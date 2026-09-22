@@ -7,6 +7,11 @@ jms_serializer:
             GreenterCore:
                 namespace_prefix: "Greenter\\Model"
                 path: "%kernel.project_dir%/config/serializer"
+            # Modelos propios de este fork (hoy: la guia del transportista). Va en su propio
+            # directorio porque el de arriba esta atado al prefijo Greenter\Model.
+            AppModel:
+                namespace_prefix: "App\\Model"
+                path: "%kernel.project_dir%/config/serializer-app"
     visitors:
         json_serialization:
             options:

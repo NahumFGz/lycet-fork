@@ -1,14 +1,21 @@
 ---
 name: lycet-fork
-description: Contexto del fork lycet-fork (por qué existe, qué bugs corrige, estado de cada fix). Úsala antes de tocar composer.json/composer.lock (versiones de greenter/*), src/Controller/v1/DespatchController.php, o config/serializer/Despatch.*.yml — y siempre antes de decir que un bug ya está resuelto.
+description: Contexto del fork lycet-fork (por qué existe, qué bugs corrige, qué agrega, estado de cada cosa). Úsala antes de tocar composer.json/composer.lock (versiones de greenter/*), src/Controller/v1/DespatchController.php, config/serializer/Despatch.*.yml, o cualquier cosa de la guía de remisión del transportista (src/Model/DespatchCarrier.php, src/Xml/, src/Greenter/) — y siempre antes de decir que un bug ya está resuelto.
 ---
 
 # lycet-fork — contexto y estado
 
 Fork de [`giansalex/lycet`](https://github.com/giansalex/lycet) (wrapper REST/Symfony sobre
-[`greenter/greenter`](https://github.com/thegreenter/greenter)). Existe solo para corregir dos
+[`greenter/greenter`](https://github.com/thegreenter/greenter)). Nació para corregir dos
 bugs encontrados en producción-de-prueba contra SUNAT real, diagnosticados desde el repo
-consumidor `demo-lycet` (Nest/TypeScript, sin poder tocar PHP desde ahí).
+consumidor `demo-lycet` (Nest/TypeScript, sin poder tocar PHP desde ahí), y hoy además **agrega
+un documento que greenter no modela**: la Guía de Remisión del **TRANSPORTISTA** (`tipoDoc` 31).
+
+greenter solo trae la guía del **remitente** (09), donde el emisor es quien manda la carga. Un
+courier que traslada carga de terceros emite la 31, donde el emisor es el transportista y el
+remitente es otro. Poner `tipoDoc: "31"` en la 09 no falla: firma un XML que dice 31 pero declara
+al transportista como remitente. Qué se agregó y cómo está verificado:
+[`reference/estado-proyecto.md`](reference/estado-proyecto.md).
 
 No confundir con `CLAUDE.md` (raíz): ese archivo describe la arquitectura general (flujo de
 request, `SeeFactory` vs `SeeApiFactory`, serialización JMS) para trabajar en el código en

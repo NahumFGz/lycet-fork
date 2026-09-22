@@ -1,0 +1,52 @@
+{
+  "version": "2022",
+  "tipoDoc": "31",
+  "serie": "V001",
+  "correlativo": "1",
+  "fechaEmision": "2026-09-22T09:00:00-05:00",
+  "company": {
+    "ruc": "20161515648",
+    "razonSocial": "MODDATOS",
+    "nombreComercial": "MODDATOS",
+    "address": {
+      "ubigueo": "150131",
+      "codigoPais": "PE",
+      "departamento": "LIMA",
+      "provincia": "LIMA",
+      "distrito": "SAN ISIDRO",
+      "direccion": "CAL. AMADOR MERINO REYNA NRO. 307"
+    }
+  },
+  "remitente": {
+    "tipoDoc": "6",
+    "numDoc": "20384203133",
+    "rznSocial": "ZV DISTRIBUIDORES S.A.C."
+  },
+  "destinatario": {
+    "tipoDoc": "1",
+    "numDoc": "45678912",
+    "rznSocial": "MARIA QUISPE ROJAS"
+  },
+  "envio": {
+    "fecTraslado": "2026-09-22T09:00:00-05:00",
+    "pesoTotal": 120.5,
+    "undPesoTotal": "KGM",
+    "numBultos": 8,
+    "partida": { "ubigueo": "150131", "direccion": "AV. ALIPIO PONCE 123 - AGENCIA LIMA" },
+    "llegada": { "ubigueo": "030201", "direccion": "JR. RAMOS 456 - AGENCIA ANDAHUAYLAS" },
+    "vehiculo": { "placa": "ABC123" },
+    "choferes": [
+      {
+        "tipo": "Principal",
+        "tipoDoc": "1",
+        "nroDoc": "12345678",
+        "nombres": "JUAN",
+        "apellidos": "PEREZ PEREZ",
+        "licencia": "Q12345678"
+      }
+    ]
+  },
+  "details": [
+    { "codigo": "ENC-0001", "descripcion": "Encomienda - caja sellada", "cantidad": 8, "unidad": "ZZ" }
+  ]
+}

@@ -8,9 +8,12 @@
 
 namespace App\Controller\v1;
 
+use App\Greenter\CarrierApi;
+use App\Model\DespatchCarrier;
 use App\Service\DocumentRequestInterface;
 use App\Service\SeeApiFactory;
 use Greenter\Model\Despatch\Despatch;
+use Greenter\Model\DocumentInterface;
 use Greenter\Model\Response\Error;
 use Greenter\Model\Response\StatusResult;
 use Greenter\Model\Response\SummaryResult;
@@ -19,6 +22,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 use Symfony\Component\Routing\Annotation\Route;
 
 /**
@@ -46,10 +50,15 @@ class DespatchController extends AbstractController
      *
      * @return Response
      */
-    public function send(SeeApiFactory $factory): Response
+    public function send(Request $request, SeeApiFactory $factory): Response
     {
         /** @var \Greenter\Model\Despatch\Despatch $document */
-        $document = $this->document->getDocument(Despatch::class);
+        $document = $this->document->getDocument($this->documentClass($request));
+
+        if ($error = $this->validateCarrier($document)) {
+            return $error;
+        }
+
         $see = $factory->build($document->getCompany()->getRuc());
 
         $xml = null;
@@ -75,9 +84,35 @@ class DespatchController extends AbstractController
      *
      * @return Response
      */
-    public function xml(): Response
+    public function xml(Request $request, SeeApiFactory $factory): Response
     {
-        return $this->document->xml(Despatch::class);
+        if ($this->documentClass($request) !== DespatchCarrier::class) {
+            return $this->document->xml(Despatch::class);
+        }
+
+        // La guia del transportista tiene su propia plantilla, que no conoce el builder de
+        // greenter al que llega `DocumentRequest::xml()` — se arma y firma por CarrierApi.
+        /** @var DespatchCarrier $document */
+        $document = $this->document->getDocument(DespatchCarrier::class);
+
+        if ($error = $this->validateCarrier($document)) {
+            return $error;
+        }
+
+        $see = $factory->build($document->getCompany()->getRuc());
+
+        if (!$see instanceof CarrierApi) {
+            return new JsonResponse(['message' => 'Guia de transportista no soportada'], 500);
+        }
+
+        $response = new Response($see->getXmlSigned($document));
+        $response->headers->set('Content-Disposition', $response->headers->makeDisposition(
+            ResponseHeaderBag::DISPOSITION_ATTACHMENT,
+            $document->getName() . '.xml'
+        ));
+        $response->headers->set('Content-Type', 'text/xml');
+
+        return $response;
     }
 
     /**
@@ -88,6 +123,44 @@ class DespatchController extends AbstractController
     public function pdf(): Response
     {
         return $this->document->pdf(Despatch::class);
+    }
+
+    /**
+     * Un `remitente` vacio pasaria de largo — la plantilla renderiza los campos sin el, y el XML
+     * sale firmado pero sin remitente. SUNAT lo rechazaria, y un rechazo de guia inmoviliza el
+     * vehiculo, asi que se corta aca con un 400 en vez de mandarlo.
+     */
+    private function validateCarrier(DocumentInterface $document): ?JsonResponse
+    {
+        if (!$document instanceof DespatchCarrier) {
+            return null;
+        }
+
+        if ($document->getRemitente() === null) {
+            return new JsonResponse(
+                ['message' => 'remitente es requerido para la guia del transportista (tipoDoc 31)'],
+                400
+            );
+        }
+
+        return null;
+    }
+
+    /**
+     * La guia del REMITENTE (09) y la del TRANSPORTISTA (31) comparten endpoint y casi todo el
+     * cuerpo; se distinguen por `tipoDoc`. La 31 necesita un campo mas (`remitente`) y otra
+     * plantilla XML — ver App\Model\DespatchCarrier.
+     */
+    private function documentClass(Request $request): string
+    {
+        $data = json_decode($request->getContent(), true);
+        // Mismo desenvoltorio que DocumentRequestParser: el cuerpo puede venir dentro de
+        // `document` o plano.
+        $document = $data['document'] ?? $data;
+
+        return is_array($document) && ($document['tipoDoc'] ?? null) === '31'
+            ? DespatchCarrier::class
+            : Despatch::class;
     }
 
     /**

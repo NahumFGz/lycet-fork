@@ -27,6 +27,12 @@ class TokenSubscriber implements EventSubscriberInterface
 
     public function onKernelRequest(RequestEvent  $event)
     {
+        // Solo la peticion del cliente: las sub-peticiones internas de Symfony (la de la pagina de
+        // error, por ejemplo) no traen el token, y rechazarlas convertia cualquier error en un 502.
+        if (!$event->isMainRequest()) {
+            return;
+        }
+
         $path = $event->getRequest()->getPathInfo();
 
         $isApi = substr($path, 0, 4) === "/api";

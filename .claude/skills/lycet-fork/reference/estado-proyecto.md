@@ -1,7 +1,8 @@
 # Estado del proyecto — lycet-fork
 
-Última verificación: 2026-09-22 (guía del transportista); 2026-09-17 (los dos bugs), sobre
-`master` + los commits que aplican cada cosa (ver `git log` para los SHA exactos).
+Última verificación: 2026-09-25 (bugs 3 a 6, rama `fix/errores-y-build-reproducible`);
+2026-09-22 (guía del transportista); 2026-09-17 (bugs 1 y 2), sobre `master` + los commits que
+aplican cada cosa (ver `git log` para los SHA exactos).
 
 Causa raíz y fix completo de cada bug: [`diagnostico-bugs.md`](diagnostico-bugs.md) — este
 archivo solo lleva el estado (qué se confirmó, qué falta, contra qué commit), no lo repitas acá.
@@ -139,6 +140,40 @@ de abajo — si rechaza, el código del error dice cuál de las dos lecturas era
 
 `subContratado` no aplica mientras el traslado lo haga flota propia; si algún día se terceriza un
 tramo, el PR #247 es el modelo a copiar.
+
+**La hora de inicio del traslado no hace falta en la 31** (revisado 2026-09-25): la página de
+SUNAT de la guía del transportista pide "fecha de inicio del traslado", sin hora, que la
+plantilla ya manda en `cac:TransitPeriod/cbc:StartDate`. La R.S. 000108-2026 cambió la guía del
+remitente, no la 31; "fecha y hora de inicio" aparece solo en las guías complementarias de
+bienes fiscalizados. El formato admite un remitente y un destinatario por guía
+(`DespatchParty`/`DeliveryCustomerParty`): no es un límite de la plantilla.
+
+## Bugs 3 a 6 — errores 502, guía sin hash, imagen distinta del lock, credenciales por defecto
+
+**✅ Resueltos y verificados** (2026-09-25, rama `fix/errores-y-build-reproducible`), sobre la
+imagen de producción construida desde la rama, no solo con `phpunit` (44/44 OK):
+
+- Bug 3: token inválido, JSON roto, sin `company` y tipo equivocado responden 403/400/400/400 en
+  JSON bajo php-pm, y `docker logs` no muestra ningún `Forcing restart`.
+- Bug 4: con `AUTH_URL`/`API_URL` inalcanzables, la 31 responde `xml` y un `hash` igual al
+  `ds:DigestValue`; contra el sandbox GRE, `send` → ticket → `status` → `ACEPTADA`, ahora con
+  `hash`.
+- Bug 5: `installed.json` de la imagen = `composer.lock` (82 paquetes, cero diferencias);
+  factura aceptada contra SUNAT beta con esas versiones.
+- Bug 6: sin variables, el contenedor sale con código 1 y dice cuáles faltan; con ellas emite;
+  el token `123456` ya no entra; la imagen no contiene `data/cert.pem`.
+
+La imagen se publica desde el CI (job `imagen` de `symfony.yml`) como
+`ghcr.io/nahumfgz/lycet-fork:<sha>` en cada push a `master`; los tests corren en PHP 8.1, el de
+la imagen.
+
+**Pendiente, no bloqueante**:
+- `composer audit` marca 40 alertas en 10 paquetes (guzzle, psr7, symfony 5.4, twig, …) —
+  heredadas, estaban igual en la imagen de `2b66031`. Subirlas es un `composer update` acotado a
+  esos paquetes, con la skill `greenter` si alguno arrastra `greenter/*`; ojo con un update
+  completo: quita `doctrine/annotations`, del que dependen las rutas `@Route`.
+- PHP 8.1 (sin parches de seguridad desde el 31/12/2025) sobre Alpine 3.17. Aceptable mientras
+  lycet no quede expuesto fuera de la red Docker.
 
 ## Siguiente paso sugerido
 

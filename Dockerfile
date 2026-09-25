@@ -23,9 +23,13 @@ RUN docker-php-ext-install soap && \
 COPY . .
 
 # Install Packages
+# Solo `composer install`: la imagen lleva exactamente las versiones de composer.lock, las mismas
+# con las que corren los tests. php-pm esta en composer.json; antes se agregaba aca con un
+# `composer require --with-all-dependencies`, que resolvia de nuevo en cada build y dejaba 24
+# paquetes con otra version que el lock (y podia traer un greenter/xml nuevo sin revisar la
+# plantilla de la guia 31, ver la skill greenter).
 RUN curl --silent --show-error -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer && \
     composer install --no-interaction --no-dev --no-autoloader --no-scripts --no-progress --ignore-platform-reqs && \
-    composer require php-pm/php-pm php-pm/httpkernel-adapter --update-no-dev --no-scripts --no-progress --ignore-platform-reqs --with-all-dependencies && \
     composer dump-autoload --optimize --no-dev --classmap-authoritative && \
     composer dump-env prod --empty && \
     find -type f -name '*.md' -delete;
@@ -42,18 +46,12 @@ WORKDIR /var/www/html
 ENV APP_ENV prod
 ENV APP_SECRET c4136a0540553455b122461ab6923e9d
 ENV WKHTMLTOPDF_PATH wkhtmltopdf
-ENV CLIENT_TOKEN 123456
-ENV SOL_USER 20161515648MODDATOS
-ENV SOL_PASS MODDATOS
 ENV CORS_ALLOW_ORIGIN .
-ENV FE_URL https://e-beta.sunat.gob.pe/ol-ti-itcpfegem-beta/billService
-ENV RE_URL https://e-beta.sunat.gob.pe/ol-ti-itemision-otroscpe-gem-beta/billService
-ENV GUIA_URL https://e-beta.sunat.gob.pe/ol-ti-itemision-guia-gem-beta/billService
-ENV AUTH_URL https://gre-test.nubefact.com/v1
-ENV API_URL https://gre-test.nubefact.com/v1
-ENV CLIENT_ID test-85e5b0ae-255c-4891-a595-0b98c65c9854
-ENV CLIENT_SECRET test-Hty/M6QshYvPgItX2P0+Kw==
 ENV TRUSTED_PROXIES="127.0.0.1,REMOTE_ADDR"
+# Sin valores por defecto para el token, las credenciales SOL ni las URLs de SUNAT: la imagen
+# traia los de prueba (MODDATOS, beta, sandbox GRE), y una variable olvidada en produccion
+# mandaba en silencio al beta. Se pasan al correr el contenedor; docker-entrypoint.sh no
+# arranca si falta alguna. Los valores de prueba estan en .env (y en .env.test).
 
 ARG PHP_EXT_DIR=/usr/local/lib/php/extensions/no-debug-non-zts-20210902
 

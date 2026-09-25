@@ -127,16 +127,19 @@ Ir a http://localhost:8000/
 
 
 ### Docker
-Desplegar con Docker.
-```
-git clone https://github.com/giansalex/lycet
-cd lycet
-docker build -t lycet .
+Desplegar con Docker. La imagen se publica por commit en `ghcr.io/nahumfgz/lycet-fork:<sha>`
+(o se construye con `docker build -t lycet .`).
 
+La imagen **no trae** token, credenciales SOL ni URLs de SUNAT: sin `CLIENT_TOKEN`, `SOL_USER`,
+`SOL_PASS`, `FE_URL`, `RE_URL`, `GUIA_URL`, `AUTH_URL` y `API_URL` el contenedor no arranca.
+`CLIENT_ID`/`CLIENT_SECRET` solo los usa la guía de remisión. Los valores del ambiente beta de
+SUNAT están en `.env`.
+```
 # copiar certificado y logo de prueba (puedes reemplazar por uno personal)
 cp tests/Resources/* data
-# ejecutar el contenedor
-docker run -d -p 8000:8000  -v ./data:/var/www/html/data --name lycet_app lycet
+# ejecutar el contenedor con las variables del ambiente de pruebas
+grep -E '^(CLIENT_TOKEN|SOL_|FE_URL|RE_URL|GUIA_URL|AUTH_URL|API_URL|CLIENT_)' .env > lycet.env
+docker run -d -p 8000:8000 --env-file lycet.env -v ./data:/var/www/html/data --name lycet_app lycet
 ```
 
 Abrir el navegador, y dirígete a http://localhost:8000/

@@ -11,3 +11,9 @@ vendor
 .php_cs.cache
 phpunit.xml.dist
 *.md
+# Certificado, logo y empresas.json se montan como volumen: un build local no puede
+# llevarse los que haya en data/ (ni los .env locales).
+data/*
+!data/.htaccess
+.env.local
+.env.*.local

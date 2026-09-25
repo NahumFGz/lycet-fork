@@ -33,8 +33,19 @@ general. Esta skill es específica de los dos bugs que motivan el fork.
 
 ## Después de aplicar los fixes
 
-En `demo-lycet`, `docker-compose.yml` buildea la imagen `lycet` directo desde git
-(`build.context: https://github.com/giansalex/lycet.git#${LYCET_GIT_SHA}`). Una vez los fixes
-estén commiteados acá, el único cambio río abajo es repuntar esa URL/SHA a
-`https://github.com/NahumFGz/lycet-fork.git#<sha>` — no hace falta vendorizar ni tocar el backend
-TypeScript.
+Los consumidores fijan un commit del fork. `demo-lycet` buildea desde git
+(`build.context: https://github.com/NahumFGz/lycet-fork.git#${LYCET_GIT_SHA}`); desde el bug 5,
+el CI publica la imagen de cada commit de `master` como `ghcr.io/nahumfgz/lycet-fork:<sha>`, que
+es lo que conviene usar: no se construye en el servidor y es exactamente la que
+pasó los tests.
+
+Al mover el SHA a uno posterior a los bugs 3 a 6: la imagen ya no trae valores por defecto, así
+que el consumidor tiene que pasar todas las variables (`docker-entrypoint.sh` dice cuáles faltan);
+los errores llegan como JSON 4xx/5xx en vez de 502; y `despatch/send` suma `hash`.
+
+**El QR de la guía solo sale en un lugar.** Es el enlace de `cdrResponse.reference` que devuelve
+`despatch/status` con la guía aceptada: ni `despatch/send` ni el XML lo traen, y `despatch/pdf`
+no lo dibuja (`DocumentRequest::pdf()` no reenvía `parameters.system.qr`, aunque la plantilla de
+greenter lo acepta; y una 31 sale armada como 09). Los consumidores
+arman su propio formato con el XML, el `hash` y ese enlace, así que esos PDF
+no se corrigieron. El QR de boleta/factura, en cambio, se arma con los datos del comprobante.

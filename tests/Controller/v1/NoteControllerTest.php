@@ -11,7 +11,6 @@ use App\Service\ConsultCdrServiceFactory;
 use Greenter\Model\Response\StatusCdrResult;
 use Greenter\Ws\Services\ConsultCdrService;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 
 class NoteControllerTest extends WebTestCase
 {
@@ -24,17 +23,12 @@ class NoteControllerTest extends WebTestCase
      */
     public function testStatusWithoutTokenIsDenied(): void
     {
-        $this->expectException(AccessDeniedHttpException::class);
-
         $client = static::createClient();
         $client->request('GET', '/api/v1/note/status?tipo=07&serie=EC01&numero=1&ruc=20161515648');
 
-        // The exception is thrown before the response is built, but some
-        // Symfony versions convert it; accept either 403 or the thrown exception.
-        $this->assertContains(
-            $client->getResponse()->getStatusCode(),
-            [401, 403]
-        );
+        // Antes la excepcion escapaba del kernel (bajo php-pm, un 502): ver ApiExceptionSubscriber.
+        $this->assertEquals(403, $client->getResponse()->getStatusCode());
+        $this->assertArrayHasKey('message', json_decode($client->getResponse()->getContent(), true));
     }
 
     // -----------------------------------------------------------------------

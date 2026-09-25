@@ -10,13 +10,11 @@ namespace App\Tests\Controller\v1;
 
 use App\Service\ConfigProviderInterface;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 
 class InvoiceControllerTest extends WebTestCase
 {
     public function testSendAccessDenied()
     {
-        $this->expectException(AccessDeniedHttpException::class);
         $client = $this->getClientConfigured();
 
         $client->request(
@@ -25,7 +23,9 @@ class InvoiceControllerTest extends WebTestCase
 
         $response = $client->getResponse();
 
-        $this->assertEquals(401, $response->getStatusCode());
+        // Antes la excepcion escapaba del kernel (bajo php-pm, un 502): ver ApiExceptionSubscriber.
+        $this->assertEquals(403, $response->getStatusCode());
+        $this->assertArrayHasKey('message', json_decode($response->getContent(), true));
     }
 
     public function testSend()

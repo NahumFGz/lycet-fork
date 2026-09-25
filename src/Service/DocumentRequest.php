@@ -20,6 +20,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\ResponseHeaderBag;
+use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 
 /**
  * Class DocumentRequest
@@ -154,7 +155,18 @@ class DocumentRequest implements DocumentRequestInterface
     {
         $request = $this->requestStack->getCurrentRequest();
 
-        return $this->parser->getObject($request, $class);
+        $document = $this->parser->getObject($request, $class);
+
+        // Todo documento se firma y se envia con las credenciales de `company.ruc`. Sin eso, el
+        // controlador terminaba llamando `getRuc()` sobre null y php-pm respondia 502.
+        if (method_exists($document, 'getCompany')) {
+            $company = $document->getCompany();
+            if ($company === null || empty($company->getRuc())) {
+                throw new BadRequestHttpException('company.ruc es requerido');
+            }
+        }
+
+        return $document;
     }
 
     /**

@@ -127,7 +127,10 @@ cambió". En su lugar:
    SUNAT cambia reglas de validación con el tiempo (ej. `fecEntregaBienes` obligatorio desde
    2026-06-01, ver skill `lycet-fork`) y esas reglas no se detectan con `/xml` (solo firma
    localmente) ni con un test unitario que no pega contra SUNAT.
-8. Commitear `composer.json` (si cambió) + `composer.lock` juntos.
+8. Commitear `composer.json` (si cambió) + `composer.lock` juntos. El Dockerfile solo hace
+   `composer install`: a la imagen llega exactamente el lock commiteado, ni más ni menos. Y
+   `config.platform.php` (8.1.26, el PHP de la imagen) hace que el update resuelva para ese PHP
+   aunque lo corras con otro.
 
 ## Si el bump es de versión mayor (`^5.x` → `^6.x`)
 

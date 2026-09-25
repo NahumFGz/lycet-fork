@@ -17,6 +17,7 @@ use Greenter\Model\DocumentInterface;
 use Greenter\Model\Response\Error;
 use Greenter\Model\Response\StatusResult;
 use Greenter\Model\Response\SummaryResult;
+use Greenter\Report\XmlUtils;
 use JMS\Serializer\SerializerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -50,7 +51,7 @@ class DespatchController extends AbstractController
      *
      * @return Response
      */
-    public function send(Request $request, SeeApiFactory $factory): Response
+    public function send(Request $request, SeeApiFactory $factory, XmlUtils $xmlUtils): Response
     {
         /** @var \Greenter\Model\Despatch\Despatch $document */
         $document = $this->document->getDocument($this->documentClass($request));
@@ -61,16 +62,24 @@ class DespatchController extends AbstractController
 
         $see = $factory->build($document->getCompany()->getRuc());
 
-        $xml = null;
         try {
             $result = $see->send($document);
-            $xml = $see->getLastXml();
         } catch (\Throwable $e) {
+            // Sin XML firmado, lo que fallo fue armar o firmar la guia, no la conexion con SUNAT:
+            // reportarlo como "HTTP" invitaria a reintentar algo que nunca va a salir.
+            if ($see->getLastXml() === null) {
+                throw $e;
+            }
             $result = (new SummaryResult())->setError(new Error('HTTP', $e->getMessage()));
         }
 
+        // Firmado antes de salir a la red: el XML y su hash estan aunque SUNAT no haya respondido,
+        // con la misma forma que el resto de comprobantes (DocumentRequest::send()).
+        $xml = $see->getLastXml();
+
         $data = [
             'xml' => $xml,
+            'hash' => $xmlUtils->getHashSign($xml),
             'sunatResponse' => $result
         ];
 

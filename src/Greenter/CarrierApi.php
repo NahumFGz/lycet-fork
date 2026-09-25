@@ -21,14 +21,15 @@ use Greenter\XMLSecLibs\Sunat\SignedXml;
  * al `Api::sendXml()` de siempre, que es el mismo canal REST (OAuth2 + ticket) que ya usa la
  * guia del remitente. Cualquier otro documento cae en `parent::send()` sin tocarse.
  *
- * `$signer`, `$lastXml` y `$options` son privados en `Api`, asi que se duplican aca capturandolos
- * en los setters que el contenedor ya llama (`setCertificate`, `setBuilderOptions`).
+ * `$signer` y `$options` son privados en `Api`, asi que se duplican aca capturandolos en los
+ * setters que el contenedor ya llama (`setCertificate`, `setBuilderOptions`). El ultimo XML
+ * enviado tambien se lleva aca (`sendXml()`), para las dos guias.
  */
 class CarrierApi extends Api
 {
     private ?string $certificate = null;
     private array $builderOptions = [];
-    private ?string $lastCarrierXml = null;
+    private ?string $lastSentXml = null;
 
     public function setCertificate(string $certificate): Api
     {
@@ -46,20 +47,33 @@ class CarrierApi extends Api
 
     public function send(DocumentInterface $document): ?BaseResult
     {
-        if (!$document instanceof DespatchCarrier) {
-            $this->lastCarrierXml = null;
+        // Esta instancia es un servicio compartido y el worker de php-pm la reusa entre
+        // peticiones: si el armado o la firma fallan, getLastXml() no puede devolver el XML de
+        // una guia anterior.
+        $this->lastSentXml = null;
 
+        if (!$document instanceof DespatchCarrier) {
             return parent::send($document);
         }
 
-        $this->lastCarrierXml = $this->getXmlSigned($document);
+        return $this->sendXml($document->getName(), $this->getXmlSigned($document));
+    }
 
-        return $this->sendXml($document->getName(), $this->lastCarrierXml);
+    /**
+     * Guarda el XML firmado antes de salir a la red (el OAuth2 y el envio van dentro de
+     * `parent::sendXml()`), asi que queda disponible aunque SUNAT no responda. `parent::send()`
+     * tambien pasa por aca con el XML que armo greenter, de modo que vale para las dos guias.
+     */
+    public function sendXml(string $name, string $content): ?BaseResult
+    {
+        $this->lastSentXml = $content;
+
+        return parent::sendXml($name, $content);
     }
 
     public function getLastXml(): ?string
     {
-        return $this->lastCarrierXml ?? parent::getLastXml();
+        return $this->lastSentXml;
     }
 
     /**

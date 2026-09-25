@@ -23,9 +23,13 @@ RUN docker-php-ext-install soap && \
 COPY . .
 
 # Install Packages
+# Solo `composer install`: la imagen lleva exactamente las versiones de composer.lock, las mismas
+# con las que corren los tests. php-pm esta en composer.json; antes se agregaba aca con un
+# `composer require --with-all-dependencies`, que resolvia de nuevo en cada build y dejaba 24
+# paquetes con otra version que el lock (y podia traer un greenter/xml nuevo sin revisar la
+# plantilla de la guia 31, ver la skill greenter).
 RUN curl --silent --show-error -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer && \
     composer install --no-interaction --no-dev --no-autoloader --no-scripts --no-progress --ignore-platform-reqs && \
-    composer require php-pm/php-pm php-pm/httpkernel-adapter --update-no-dev --no-scripts --no-progress --ignore-platform-reqs --with-all-dependencies && \
     composer dump-autoload --optimize --no-dev --classmap-authoritative && \
     composer dump-env prod --empty && \
     find -type f -name '*.md' -delete;

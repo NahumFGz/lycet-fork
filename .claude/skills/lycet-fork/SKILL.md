@@ -35,9 +35,10 @@ general. Esta skill es específica de los dos bugs que motivan el fork.
 
 Los consumidores fijan un commit del fork. `demo-lycet` buildea desde git
 (`build.context: https://github.com/NahumFGz/lycet-fork.git#${LYCET_GIT_SHA}`); desde el bug 5,
-el CI publica la imagen de cada commit de `master` como `ghcr.io/nahumfgz/lycet-fork:<sha>`, que
-es lo que conviene usar: no se construye en el servidor y es exactamente la que
-pasó los tests.
+el CI publica la imagen de `master` como `ghcr.io/nahumfgz/lycet-fork:<sha>`, que es lo que
+conviene usar: no se construye en el servidor y es exactamente la que pasó los tests. El CI
+solo corre a mano (Actions → Symfony → Run workflow sobre `master`): un push no publica nada, así
+que el commit que se quiera fijar hay que publicarlo corriéndolo.
 
 Al mover el SHA a uno posterior a los bugs 3 a 6: la imagen ya no trae valores por defecto, así
 que el consumidor tiene que pasar todas las variables (`docker-entrypoint.sh` dice cuáles faltan);

@@ -1,11 +1,7 @@
 name: Symfony
 
 on:
-  push:
-    branches: [ "master" ]
-  pull_request:
-    branches: [ "master" ]
-  # A mano desde la pestana Actions: publica la imagen de master sin hacer otro push.
+  # Solo a mano, desde la pestana Actions (Run workflow): ni push ni PR lo disparan.
   workflow_dispatch:
 
 permissions:
@@ -39,8 +35,8 @@ jobs:
 
   # La imagen de produccion, publicada por commit: quien la usa la fija con
   # ghcr.io/nahumfgz/lycet-fork:<sha> en vez de construirla desde git en su servidor. Solo
-  # master publica (push o a mano); en un PR o en otra rama solo se construye, para no enterarse
-  # en master de que el Dockerfile se rompio.
+  # publica si se corre sobre master; sobre otra rama solo se construye, para probar el
+  # Dockerfile antes de mergear.
   imagen:
     needs: symfony-tests
     runs-on: ubuntu-latest

@@ -127,8 +127,8 @@ Ir a http://localhost:8000/
 
 
 ### Docker
-Desplegar con Docker. La imagen se publica por commit en `ghcr.io/nahumfgz/lycet-fork:<sha>`
-(o se construye con `docker build -t lycet .`).
+Desplegar con Docker. La imagen se publica en `ghcr.io/nahumfgz/lycet-fork:<sha>` al correr a
+mano el workflow `Symfony` sobre `master` (o se construye con `docker build -t lycet .`).
 
 La imagen **no trae** token, credenciales SOL ni URLs de SUNAT: sin `CLIENT_TOKEN`, `SOL_USER`,
 `SOL_PASS`, `FE_URL`, `RE_URL`, `GUIA_URL`, `AUTH_URL` y `API_URL` el contenedor no arranca.

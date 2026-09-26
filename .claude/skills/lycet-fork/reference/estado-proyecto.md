@@ -164,8 +164,8 @@ imagen de producción construida desde la rama, no solo con `phpunit` (44/44 OK)
   el token `123456` ya no entra; la imagen no contiene `data/cert.pem`.
 
 La imagen se publica desde el CI (job `imagen` de `symfony.yml`) como
-`ghcr.io/nahumfgz/lycet-fork:<sha>` en cada push a `master`; los tests corren en PHP 8.1, el de
-la imagen.
+`ghcr.io/nahumfgz/lycet-fork:<sha>` cuando se corre a mano sobre `master` (ni push ni PR lo
+disparan); los tests corren en PHP 8.1, el de la imagen.
 
 **Pendiente, no bloqueante**:
 - `composer audit` marca 40 alertas en 10 paquetes (guzzle, psr7, symfony 5.4, twig, …) —

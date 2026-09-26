@@ -1,5 +1,8 @@
 .git
 .idea
+# Docs internos (skills) y CI: no los usa el build y no tienen por qué ir en la imagen.
+.claude
+.github
 tests
 var
 vendor

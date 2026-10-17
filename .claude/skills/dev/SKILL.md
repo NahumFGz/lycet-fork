@@ -11,7 +11,7 @@ iterar código ni para correr `phpunit`. Para eso están `Dockerfile.dev` +
 `docker-compose.dev.yml`, agregados aparte.
 
 **Probado de punta a punta** (2026-09-17): `docker compose -f docker-compose.dev.yml up --build`
-levanta bien, `POST /api/v1/invoice/send?token=123456` con
+levanta bien, `POST /api/v1/invoice/send` (token `123456`) con
 `tests/Resources/documents/invoice.json` fue aceptado por SUNAT beta real
 (`cdrResponse.code: "0"`), y `php bin/phpunit` corre 21/21 OK dentro del contenedor.
 
@@ -50,12 +50,14 @@ necesita salida a internet para que las requests lleguen de verdad a SUNAT beta.
 
 ## Probar los endpoints
 
-Todas las rutas cuelgan de `/api/v1/...` (no `/v1/...`) y la autenticación es un **query param**
-`?token=...` (no un header `Authorization`) — la valida `src/EventSubscriber/TokenSubscriber.php`
-contra `CLIENT_TOKEN` del `.env` (`123456` en el `.env` committeado). Ejemplo verificado:
+Todas las rutas cuelgan de `/api/v1/...` (no `/v1/...`) y la autenticación es el header
+`Authorization: Bearer <token>` — la valida `src/EventSubscriber/TokenSubscriber.php` contra
+`CLIENT_TOKEN` del `.env` (`123456` en el `.env` committeado). El query param `?token=...` se
+acepta todavía para los clientes viejos (si viene el header, manda el header). Ejemplo:
 
 ```bash
-curl -X POST "http://localhost:8000/api/v1/invoice/send?token=123456" \
+curl -X POST "http://localhost:8000/api/v1/invoice/send" \
+  -H "Authorization: Bearer 123456" \
   -H "Content-Type: application/json" \
   -d @tests/Resources/documents/invoice.json
 ```

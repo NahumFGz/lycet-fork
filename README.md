@@ -58,11 +58,13 @@ esta opción cuando emplea contenedores.
 
 #### API de gestión de empresas
 
-También puede gestionar empresas programáticamente via API:
+También puede gestionar empresas programáticamente via API. Toda ruta `/api/*` pide el
+`CLIENT_TOKEN` en el header `Authorization: Bearer <token>`; `?token=<token>` se acepta todavía,
+pero queda escrito en los access logs:
 
 **Registrar/Actualizar empresa:**
 ```bash
-curl -X PUT "http://localhost:8000/api/v1/configuration/company/20000000001?token=123456" \
+curl -X PUT "http://localhost:8000/api/v1/configuration/company/20000000001" -H "Authorization: Bearer 123456" \
   -H "Content-Type: application/json" \
   -d '{
     "SOL_USER": "20000000001MODDATOS",
@@ -74,19 +76,19 @@ curl -X PUT "http://localhost:8000/api/v1/configuration/company/20000000001?toke
 
 **Subir logo (separado para evitar límite de payload):**
 ```bash
-curl -X PUT "http://localhost:8000/api/v1/configuration/company/20000000001/logo?token=123456" \
+curl -X PUT "http://localhost:8000/api/v1/configuration/company/20000000001/logo" -H "Authorization: Bearer 123456" \
   -H "Content-Type: application/json" \
   -d '{"logo": "<logo en base64>"}'
 ```
 
 **Eliminar logo:**
 ```bash
-curl -X DELETE "http://localhost:8000/api/v1/configuration/company/20000000001/logo?token=123456"
+curl -X DELETE "http://localhost:8000/api/v1/configuration/company/20000000001/logo" -H "Authorization: Bearer 123456"
 ```
 
 **Eliminar empresa:**
 ```bash
-curl -X DELETE "http://localhost:8000/api/v1/configuration/company/20000000001?token=123456"
+curl -X DELETE "http://localhost:8000/api/v1/configuration/company/20000000001" -H "Authorization: Bearer 123456"
 ```
 
 Los campos opcionales (`FE_URL`, `RE_URL`, `GUIA_URL`, `AUTH_URL`, `API_URL`, `CLIENT_ID`, `CLIENT_SECRET`) permiten configurar URLs por empresa. Si no se proporcionan, se usan las del `.env`.

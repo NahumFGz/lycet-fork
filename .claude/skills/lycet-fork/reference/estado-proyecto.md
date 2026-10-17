@@ -1,6 +1,7 @@
 # Estado del proyecto — lycet-fork
 
-Última verificación: 2026-09-25 (bugs 3 a 6, rama `fix/errores-y-build-reproducible`);
+Última verificación: 2026-10-17 (token por header, rama `fix/token-en-header`);
+2026-09-25 (bugs 3 a 6, rama `fix/errores-y-build-reproducible`);
 2026-09-22 (guía del transportista); 2026-09-17 (bugs 1 y 2), sobre `master` + los commits que
 aplican cada cosa (ver `git log` para los SHA exactos).
 
@@ -174,6 +175,23 @@ disparan); los tests corren en PHP 8.1, el de la imagen.
   completo: quita `doctrine/annotations`, del que dependen las rutas `@Route`.
 - PHP 8.1 (sin parches de seguridad desde el 31/12/2025) sobre Alpine 3.17. Aceptable mientras
   lycet no quede expuesto fuera de la red Docker.
+
+## Token por header — `Authorization: Bearer`
+
+**✅ Hecho y verificado** (2026-10-17, rama `fix/token-en-header`). El token iba solo en
+`?token=`, así que quedaba escrito en los access logs de quien llama y de lycet. Ahora
+`TokenSubscriber` lo toma de `Authorization: Bearer <token>` y lo compara con `hash_equals`; sin
+ese header acepta todavía `?token=`, para que un cliente viejo siga andando mientras se despliega
+el nuevo. Si el header viene, manda: un `Bearer` malo es 403 aunque la query traiga el bueno.
+Un `CLIENT_TOKEN` vacío no deja pasar nada.
+
+Verificado con `phpunit` (63/63, `TokenSubscriberTest` + un caso en `ApiErrorsTest`) y sobre la
+imagen de producción construida desde la rama: header bueno → pasa (400 del cuerpo), query buena →
+pasa, header malo o sin token → 403 JSON, sin `Forcing restart`; el token no aparece en
+`docker logs` en las peticiones que lo mandan por header.
+
+**Pendiente**: quitar `?token=` cuando ningún cliente lo use (gutsa-courier lo manda por header
+desde su #65).
 
 ## Siguiente paso sugerido
 

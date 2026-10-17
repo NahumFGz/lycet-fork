@@ -22,6 +22,14 @@ class ApiErrorsTest extends WebTestCase
         $this->assertEquals('This action needs a valid token!', $response['body']['message']);
     }
 
+    public function testBearerTokenReachesTheController(): void
+    {
+        // Con el token en el header la peticion pasa y el error ya es del cuerpo, no del token.
+        $response = $this->post('/api/v1/invoice/send', '{}', ['HTTP_AUTHORIZATION' => 'Bearer 123456']);
+
+        $this->assertEquals(400, $response['status']);
+    }
+
     /**
      * @dataProvider notAnObjectProvider
      */
@@ -81,10 +89,10 @@ class ApiErrorsTest extends WebTestCase
     /**
      * @return array{status: int, body: array}
      */
-    private function post(string $uri, string $content): array
+    private function post(string $uri, string $content, array $server = []): array
     {
         $client = static::createClient();
-        $client->request('POST', $uri, [], [], ['CONTENT_TYPE' => 'application/json'], $content);
+        $client->request('POST', $uri, [], [], ['CONTENT_TYPE' => 'application/json'] + $server, $content);
         $response = $client->getResponse();
 
         $this->assertStringContainsString('application/json', $response->headers->get('Content-Type'));
